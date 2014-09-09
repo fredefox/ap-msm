@@ -7,6 +7,10 @@
  -
  -     [advanced programming course homepage](http://www.diku.dk/~kflarsen/ap-2014/notes/msm.html)
  -
+ - The code structure is loosely based on the handed-out skeletal implementation:
+ -
+ -     [msm-skel.hs](http://www.diku.dk/~kflarsen/ap-2014/notes/msm-skel.hs)
+ -
  - Written by Frederik Hanghøj Iversen
  - for the course Advanced Programming
  - at The University of Copenhagen 2014
@@ -18,6 +22,8 @@
  -
  -}
 module MSM where
+
+import Control.Monad
 
 {-
  - ***
@@ -73,4 +79,4 @@ data ErrorType =
 	| InvalidPc
 	| Unspec String
 
-data Error = Error { errorType :: ErrorType }
+data Error = Error { errorType :: ErrorType } deriving (Show, Eq)
