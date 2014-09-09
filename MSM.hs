@@ -72,11 +72,21 @@ data State =
  -
  -}
 
-data ErrorType =
-	| StackUnderflow
+data ErrorType
+	= StackUnderflow
 	| UnallocatedRegister Int
 	| RegisterAlreadyAllocated
 	| InvalidPc
 	| Unspec String
+	deriving (Show, Read, Eq)
 
 data Error = Error { errorType :: ErrorType } deriving (Show, Eq)
+
+{-
+ - ***
+ -
+ - Definition of the MSM (`MSM`)
+ -
+ -}
+
+-- newtype MSM = MSM (State -> ...)
