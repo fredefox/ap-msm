@@ -1,7 +1,7 @@
 {-
  - ***
  -
- - This module implements all the functions of the curve-library.
+ - This module implements all the functions of the Micro Stack Machine (or MSM for short)-library.
  -
  - The implementation follows the specification located at:
  -
@@ -22,7 +22,7 @@ module MSM where
 {-
  - ***
  -
- - Decleration of an instruction
+ - Decleration of an instruction (`Inst`) and a program (`Prog`)
  -
  -}
 data Inst
@@ -40,3 +40,10 @@ data Inst
     deriving (Eq,Show)
 
 type Prog = [Inst]
+
+{-
+ - ***
+ -
+ - Declare a stack (`Stack`), registers (`Regs`) and the state of the MSM (`State`)
+ -
+ -}
