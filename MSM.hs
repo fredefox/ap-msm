@@ -47,3 +47,30 @@ type Prog = [Inst]
  - Declare a stack (`Stack`), registers (`Regs`) and the state of the MSM (`State`)
  -
  -}
+type Stack = [Int]
+
+type Regs = [Int]
+
+data State =
+	State {
+		prog  :: Prog,
+		pc    :: Int,
+		stack :: Stack,
+		regs  :: Regs
+	}
+
+{-
+ - ***
+ -
+ - Declare error types (`ErrorType`) and errors (`Error`)
+ -
+ -}
+
+data ErrorType =
+	| StackUnderflow
+	| UnallocatedRegister Int
+	| RegisterAlreadyAllocated
+	| InvalidPc
+	| Unspec String
+
+data Error = Error { errorType :: ErrorType }
