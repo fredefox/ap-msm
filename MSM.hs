@@ -18,3 +18,25 @@
  -
  -}
 module MSM where
+
+{-
+ - ***
+ -
+ - Decleration of an instruction
+ -
+ -}
+data Inst
+    = PUSH Int
+    | POP
+    | DUP
+    | SWAP
+    | NEWREG Int
+    | LOAD
+    | NEG
+    | ADD
+    | JMP
+    | CJMP Int
+    | HALT
+    deriving (Eq,Show)
+
+type Prog = [Inst]
