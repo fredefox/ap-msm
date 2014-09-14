@@ -272,16 +272,29 @@ halt     =  MSM $ \state -> ((), state)
  -
  -}
 getInst :: MSM Inst
--- TODO: Singleton typechecking implementation
 getInst = MSM $ \state -> ( prog state !! pc state, state)
 
-interInst :: Inst -> MSM Bool
--- TODO: Singleton typechecking implementation
-interInst = const $ return True
+-- Small convenience-method for `interpInst`
+shouldHalt :: MSM a -> MSM Bool
+shouldHalt m = MSM $ \state -> (HALT == prog state !! pc state, state)
+
+interpInst :: Inst -> MSM Bool
+interpInst (PUSH i) = shouldHalt $ push i
+interpInst POP = shouldHalt $ pop
+interpInst DUP = shouldHalt $ dup
+interpInst SWAP = shouldHalt $ swap
+interpInst (NEWREG i) = shouldHalt $ newreg i
+interpInst LOAD = shouldHalt $ load
+interpInst NEG = shouldHalt $ neg
+interpInst ADD = shouldHalt $ add
+interpInst JMP = shouldHalt $ jmp
+interpInst (CJMP i) = shouldHalt $ cjmp i
+interpInst HALT = shouldHalt $ halt
+
 
 interp :: MSM ()
 interp = run
 	where run = do
 		inst <- getInst
-		cont <- interInst inst
+		cont <- interpInst inst
 		when cont run
