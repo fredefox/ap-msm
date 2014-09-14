@@ -240,7 +240,7 @@ cjmp     :: Int -> MSM ()
 cjmp i   =  MSM $ \state ->
 	let x:xs = stack state
 	    pc' | x < 0 = i | otherwise = (pc state + 1)
-	in ((), state)
+	in ((), state { pc = pc', stack = xs } )
 
 halt     :: MSM ()
 halt     =  MSM $ \state -> ((), state)
