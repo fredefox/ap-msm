@@ -121,10 +121,11 @@ data Error =
 newtype MSM a = MSM (State -> (a, State))
 
 {-
- - An `MSM` is a state-monad where the current state (not suprisingly) is an
- - instance of a `State`. A state-monad should return the new state along with
- - the result of some computation. The result, then, in this case is the head
- - of the stack.
+ - An `MSM` is a specific kind of state-monad where the current state (not
+ - suprisingly) is an instance of a `State`. A state-monad should return the
+ - new state along with the result of some computation. The result, then, in
+ - some cases can be the head of the stack - or in other cases it can be the
+ - empty type `()` for operation that do not produce a "result", like `push`.
  -
  - That is, given the state of the machine, this monad computes
  -
@@ -132,7 +133,7 @@ newtype MSM a = MSM (State -> (a, State))
  -
  - where
  -
- -   `a`  is the result of the computation
+ -   `a`  is the result of some computation
  -   `s0` is the state before the computation
  -   `s1` is the new state resulting from the single computational step
  -}
