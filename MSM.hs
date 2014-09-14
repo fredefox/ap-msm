@@ -32,23 +32,10 @@ module MSM where
  - Imports
  -
  -}
-
-{-
- - TODO: Use or remove these:
- -
-
-import Control.Applicative
-
-import Control.Monad
-
-
- -
- -}
-
--- This supplies `when :: Monad m => Bool -> m () -> m ()`
 import Control.Monad
 
 import qualified Data.Map as Map
+
 {-
  - ***
  -
