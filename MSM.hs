@@ -38,11 +38,11 @@ import Control.Applicative
 
 import Control.Monad
 
-import qualified Data.Map as Map
+
 
  -
  -}
-
+import qualified Data.Map as Map
 {-
  - ***
  -
@@ -73,7 +73,7 @@ type Prog = [Inst]
  -}
 type Stack = [Int]
 
-type Regs = [Int]
+type Regs = Map.Map Int Int
 
 data State =
 	State {
@@ -84,7 +84,7 @@ data State =
 	} deriving (Show)
 
 initialState :: Prog -> State
-initialState pr = State pr 0 [] []
+initialState pr = State pr 0 [] Map.empty
 {-
  - ***
  -
@@ -142,7 +142,7 @@ instance Monad MSM where
 					prog = [],
 					pc = 0,
 					stack = [],
-					regs = []
+					regs = Map.empty
 				}
 			)
 	{-
@@ -207,19 +207,18 @@ swap     =  MSM $ \state ->
 
 newreg   :: Int -> MSM ()
 newreg i =  MSM $ \state ->
-	((), state { regs = take i $ regs state ++ replicate i 0 } )
+	((), state { regs = Map.insert i 0 $ regs state } )
 
 load     :: MSM ()
 load     =  MSM $ \state ->
 	let x:xs = stack state
-	    k    = regs state !! x
+	    k    = regs state Map.! x
 	in ((), state { stack = k:xs } )
 
 store    :: MSM ()
 store    =  MSM $ \state ->
 	let v:i:xs = stack state
-	    r' = regs state
-	    r = take i r' ++ v : drop (i + 1) r'
+	    r = Map.insert i v $ regs state
 	in ((), state { regs = r, stack = xs } )
 
 neg      :: MSM ()
