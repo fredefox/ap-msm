@@ -42,9 +42,12 @@ import Control.Applicative
 import Control.Monad
 
 
-
  -
  -}
+
+-- This supplies `when :: Monad m => Bool -> m () -> m ()`
+import Control.Monad
+
 import qualified Data.Map as Map
 {-
  - ***
