@@ -258,4 +258,23 @@ halt     =  MSM $ \state -> ((), state)
  - already defines the program. So it should just take that machine and run
  - it's program.
  -
+ - To implement `interp` a two helper-functions will be defined first:
+ -
+ -   * `getInst`
+ -   * `interInst`
+ -
  -}
+getInst :: MSM Inst
+-- TODO: Singleton typechecking implementation
+getInst = return HALT
+
+interInst :: Inst -> MSM Bool
+-- TODO: Singleton typechecking implementation
+interInst = const $ return True
+
+interp :: MSM ()
+interp = run
+	where run = do
+		inst <- getInst
+		cont <- interInst inst
+		when cont run
