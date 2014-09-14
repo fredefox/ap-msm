@@ -145,14 +145,7 @@ instance Monad MSM where
 	 -
 	 -   return :: Monad m => a -> m a
 	 -}
-	return a = MSM $ const (a,
-				State {
-					prog = [],
-					pc = 0,
-					stack = [],
-					regs = Map.empty
-				}
-			)
+	return a = MSM $ const (a, initial [])
 	{-
 	 - `sfc`    is a stateful computation.
 	 - `f`     so far I'll just say that it's a function
