@@ -137,23 +137,30 @@ newtype MSM a = MSM (State -> (a, State))
  -   `s0` is the state before the computation
  -   `s1` is the new state resulting from the single computational step
  -}
+instance Functor MSM where
+	{-
+	 - (fmap) :: (a -> b) -> MSM a -> MSM b
+	 -}
+	f `fmap` MSM sfc = MSM $ \s -> let (a, b) = sfc s
+								   in (f a, b)
+
 instance Monad MSM where
 	{-
 	 - Packs a value in an `MSM`
 	 -
 	 - Type signature:
 	 -
-	 -   return :: Monad m => a -> m a
+	 -   return :: a -> MSM a
 	 -}
 	return a = MSM $ const (a, initial [])
 	{-
-	 - `sfc`    is a stateful computation.
+	 - `sfc`   is a stateful computation.
 	 - `f`     so far I'll just say that it's a function
 	 -         - the current instruction perhaps?
 	 -
 	 - Type signature:
 	 -
-	 -   (>>=) :: Monad m => m a -> (a -> m b) -> m b
+	 -   (>>=) :: MSM a -> (a -> MSM b) -> MSM b
 	 -}
 	(MSM sfc) >>= f = MSM $ \s -> let (a, b)  = sfc s
 	                                  (MSM g) = f a
