@@ -298,3 +298,17 @@ interp = run
 		inst <- getInst
 		cont <- interpInst inst
 		when cont run
+
+{-
+ - ***
+ -
+ - Implementation of `runMSM`
+ -
+ - This implementation is taken directly from the skeletal implementaion.
+ -
+ -}
+-- This does not type-check and therefore it is outcommented.
+--runMSM :: Prog -> Either Error Int
+--runMSM p =
+--	let (MSM f) = interp
+--	in fmap snd $ f $ initial p
