@@ -90,8 +90,8 @@ data State =
 		regs  :: Regs
 	} deriving (Show)
 
-initialState :: Prog -> State
-initialState pr = State pr 0 [] Map.empty
+initial :: Prog -> State
+initial pr = State pr 0 [] Map.empty
 {-
  - ***
  -
