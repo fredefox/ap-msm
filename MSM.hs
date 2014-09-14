@@ -1,13 +1,16 @@
 {-
  - ***
  -
- - This module implements all the functions of the Micro Stack Machine (or MSM for short)-library.
+ - This module implements all the functions of the Micro Stack Machine (or MSM
+ - for short)-library.
  -
  - The implementation follows the specification located at:
  -
- -     [advanced programming course homepage](http://www.diku.dk/~kflarsen/ap-2014/notes/msm.html)
+ -     [advanced programming course
+ -     homepage](http://www.diku.dk/~kflarsen/ap-2014/notes/msm.html)
  -
- - The code structure is loosely based on the handed-out skeletal implementation:
+ - The code structure is loosely based on the handed-out skeletal
+ - implementation:
  -
  -     [msm-skel.hs](http://www.diku.dk/~kflarsen/ap-2014/notes/msm-skel.hs)
  -
@@ -68,7 +71,8 @@ type Prog = [Inst]
 {-
  - ***
  -
- - Declare a stack (`Stack`), registers (`Regs`) and the state of the MSM (`State`)
+ - Declare a stack (`Stack`), registers (`Regs`) and the state of the MSM
+ - (`State`)
  -
  -}
 type Stack = [Int]
@@ -114,10 +118,10 @@ data Error =
 newtype MSM a = MSM (State -> (a, State))
 
 {-
- - An `MSM` is a state-monad where the current state (not suprisingly)
- - is an instance of a `State`. A state-monad should return the new state
- - along with the result of some computation. The result, then, in this case
- - is the head of the stack.
+ - An `MSM` is a state-monad where the current state (not suprisingly) is an
+ - instance of a `State`. A state-monad should return the new state along with
+ - the result of some computation. The result, then, in this case is the head
+ - of the stack.
  -
  - That is, given the state of the machine, this monad computes
  -
@@ -244,3 +248,17 @@ cjmp i   =  MSM $ \state ->
 
 halt     :: MSM ()
 halt     =  MSM $ \state -> ((), state)
+
+{-
+ - ***
+ -
+ - Implementation of `interp`
+ -
+ - This functions type definition confuses me a bit. It's similiar to how
+ - io-functions have the type `IO ()`, that is, they dont really return
+ - anything they just produce the result that stuff is printed to the screen.
+ - This should work similiar I suppose, because the `state` of and `MSM`
+ - already defines the program. So it should just take that machine and run
+ - it's program.
+ -
+ -}
