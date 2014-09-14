@@ -273,7 +273,7 @@ halt     =  MSM $ \state -> ((), state)
  -}
 getInst :: MSM Inst
 -- TODO: Singleton typechecking implementation
-getInst = return HALT
+getInst = MSM $ \state -> ( prog state !! pc state, state)
 
 interInst :: Inst -> MSM Bool
 -- TODO: Singleton typechecking implementation
