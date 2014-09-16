@@ -333,6 +333,7 @@ interp = run
  -}
 -- This does not type-check and therefore it is outcommented.
 runMSM :: Prog -> Either Error Int
+runMSM [] = undefined
 runMSM p =
 	let (MSM f) = interp
 	    ethrETpl = f $ initial p
