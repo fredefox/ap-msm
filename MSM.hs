@@ -49,6 +49,7 @@ data Inst
     | SWAP
     | NEWREG Int
     | LOAD
+    | STORE
     | NEG
     | ADD
     | JMP
@@ -288,7 +289,7 @@ getInst = MSM $ \state ->
 		p = prog state
 		i = pc   state
 	in
-		if 0 < i && i < length p
+		if 0 <= i && i < length p
 		then
 			Right (state, p !! i)
 		else
