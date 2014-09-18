@@ -212,8 +212,8 @@ swap     :: MSM ()
 swap     =  do
 	x <- pop
 	y <- pop
-	_ <- push y
-	push x
+	_ <- push x
+	push y
 
 newreg   :: Int -> MSM ()
 newreg i =  MSM $ \state ->
