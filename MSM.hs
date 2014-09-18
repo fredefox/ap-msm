@@ -316,8 +316,10 @@ interpInst HALT = return False
  -     DUP -> dup
  -     return True
  -}
-interp :: MSM ()
-interp = run
+interp :: MSM Int
+interp = do
+		x <- run
+		pop
 	where run = do
 		inst <- getInst
 		cont <- interpInst inst
@@ -333,8 +335,6 @@ interp = run
  -}
 -- This does not type-check and therefore it is outcommented.
 runMSM :: Prog -> Either Error Int
-runMSM [] = undefined
 runMSM p =
 	let (MSM f) = interp
-	    ethrETpl = f $ initial p
-	in either (\e -> Left e) (\(st, _) -> Right $ head $ stack st) ethrETpl
+	in fmap snd $ f $ initial p
