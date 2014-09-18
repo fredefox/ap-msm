@@ -338,3 +338,5 @@ runMSM :: Prog -> Either Error Int
 runMSM p =
 	let (MSM f) = interp
 	in fmap snd $ f $ initial p
+
+p42 = [NEWREG 0, PUSH 1, DUP, NEG, ADD, PUSH 40, STORE, PUSH 2, PUSH 0, LOAD, ADD, HALT]
