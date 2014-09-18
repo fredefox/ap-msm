@@ -49,6 +49,7 @@ data Inst
     | SWAP
     | NEWREG Int
     | LOAD
+    | STORE
     | NEG
     | ADD
     | JMP
@@ -105,7 +106,8 @@ data Error =
  - Definition of the MSM (`MSM`)
  -
  -}
-newtype MSM a = MSM (State -> (a, State))
+--newtype MSM a = MSM (State -> (a, State))
+newtype MSM a = MSM (State -> Either Error (State, a))
 
 {-
  - An `MSM` is a specific kind of state-monad where the current state (not
@@ -127,9 +129,14 @@ newtype MSM a = MSM (State -> (a, State))
 instance Functor MSM where
 	{-
 	 - (fmap) :: (a -> b) -> MSM a -> MSM b
+	 -
+	 - Jonas showed me his implementation of `fmap`:
+	 -
+	 -   `fmap = liftM`
 	 -}
-	f `fmap` MSM sfc = MSM $ \s -> let (a, b) = sfc s
-								   in (f a, b)
+	f `fmap` MSM sfc = MSM $ \s -> case sfc s of
+								   (Left e) -> Left e
+								   (Right (s, a)) -> Right (s, f a)
 
 instance Monad MSM where
 	{-
@@ -139,7 +146,7 @@ instance Monad MSM where
 	 -
 	 -   return :: a -> MSM a
 	 -}
-	return a = MSM $ const (a, initial [])
+	return a = MSM $ \s -> Right (s, a)
 	{-
 	 - `sfc`   is a stateful computation.
 	 - `f`     so far I'll just say that it's a function
@@ -149,9 +156,8 @@ instance Monad MSM where
 	 -
 	 -   (>>=) :: MSM a -> (a -> MSM b) -> MSM b
 	 -}
-	(MSM sfc) >>= f = MSM $ \s -> let (a, b)  = sfc s
-	                                  (MSM g) = f a
-                                  in   g b
+	(MSM sfc0) >>= f = MSM $ \s -> either Left nextStep $ sfc0 s
+						where nextStep (s', a) = let (MSM sfc1) = f a in sfc1 s'
 
 {-
  - ***
@@ -183,62 +189,84 @@ instance Monad MSM where
  -}
 push     :: Int -> MSM ()
 push a   =  MSM $ \state ->
-	((), state { stack = a : stack state } )
+	Right (state { stack = a : stack state }, () )
 
 pop      :: MSM Int
 pop      =  MSM $ \state ->
-	let x:xs = stack state
-	in (x, state { stack = xs} )
+	case stack state of
+	[] -> Left $ Error StackUnderflow
+	x:xs -> Right (state { stack = xs }, x )
 
+incr     :: MSM ()
+incr     =  MSM $ \s -> Right ( s { pc = succ $ pc s }, () )
+-- These functions are derivable from previously derived monadic instructions
+-- Jonas argues that they should live in `interpInst` - I like having them
+-- defined here so the mapping from `Inst` to these functions are entirely
+-- trivial.
 dup      :: MSM ()
-dup      =  MSM $ \state ->
-	let xs@(x:_) = stack state
-	in ((), state { stack = x:xs } )
+dup      =  do
+	x <- pop
+	push x
+	push x
+
+get      :: MSM State
+get      = MSM $ \s -> Right (s,s)
 
 swap     :: MSM ()
-swap     =  MSM $ \state ->
-	let x:x':xs = stack state
-	in ((), state { stack = x':x:xs } )
+swap     =  do
+	x <- pop
+	y <- pop
+	_ <- push x
+	push y
 
 newreg   :: Int -> MSM ()
 newreg i =  MSM $ \state ->
-	((), state { regs = Map.insert i 0 $ regs state } )
+	Right (state { regs = Map.insert i 0 $ regs state }, () )
+
 
 load     :: MSM ()
 load     =  MSM $ \state ->
-	let x:xs = stack state
-	    k    = regs state Map.! x
-	in ((), state { stack = k:xs } )
+	case stack state of
+	[] -> Left $ Error StackUnderflow
+	x:xs -> Right (state { stack = k:xs }, ()) where
+		-- TODO: Runtime error here:
+		k = regs state Map.! x
 
 store    :: MSM ()
 store    =  MSM $ \state ->
-	let v:i:xs = stack state
-	    r = Map.insert i v $ regs state
-	in ((), state { regs = r, stack = xs } )
+	case stack state of
+	[] -> Left $ Error StackUnderflow
+	[_] -> Left $ Error StackUnderflow
+	v:i:xs -> Right ( state { regs = r, stack = xs}, ()) where
+		-- TODO: Should actually throw an error if `i` haven't been allocated.
+		r = Map.insert i v $ regs state
 
 neg      :: MSM ()
-neg      =  MSM $ \state ->
-	let x:xs = stack state
-	in ((), state { stack = (-x):xs } )
+neg      =  do
+	x <- pop
+	push (-x)
 
 add      :: MSM ()
-add      =  MSM $ \state ->
-	let x:x':xs = stack state
-	in ((), state { stack = (x+x'):xs} )
+add      =  do
+	x <- pop
+	y <- pop
+	push $ x + y
 
 jmp      :: MSM ()
-jmp      =  MSM $ \state ->
-	let x:xs = stack state
-	in ((), state { pc = x, stack = xs } )
+jmp      =  do
+	x <- pop
+	MSM $ \s -> Right (s { pc = x }, ())
 
 cjmp     :: Int -> MSM ()
-cjmp i   =  MSM $ \state ->
-	let x:xs = stack state
-	    pc' | x < 0 = i | otherwise = (pc state + 1)
-	in ((), state { pc = pc', stack = xs } )
+cjmp i   =  do
+	x <- pop
+	if x < 0 then
+		MSM $ \s -> Right (s { pc = i }, ())
+	else
+		MSM $ \s -> Right (s { pc = pc s + 1 }, ())
 
-halt     :: MSM ()
-halt     =  MSM $ \state -> ((), state)
+halt     :: MSM Bool
+halt     =  return False
 
 {-
  - ***
@@ -258,29 +286,45 @@ halt     =  MSM $ \state -> ((), state)
  -   * `interInst`
  -
  -}
-getInst :: MSM Inst
-getInst = MSM $ \state -> ( prog state !! pc state, state)
 
--- Small convenience-method for `interpInst`
-shouldHalt :: MSM a -> MSM Bool
-shouldHalt m = MSM $ \state -> (HALT == prog state !! pc state, state)
+getInst :: MSM Inst
+getInst = MSM $ \state ->
+	let
+		p = prog state
+		i = pc   state
+	in
+		if 0 <= i && i < length p
+		then
+			Right (state, p !! i)
+		else
+			Left $ Error InvalidPc
 
 interpInst :: Inst -> MSM Bool
-interpInst (PUSH i) = shouldHalt $ push i
-interpInst POP = shouldHalt $ pop
-interpInst DUP = shouldHalt $ dup
-interpInst SWAP = shouldHalt $ swap
-interpInst (NEWREG i) = shouldHalt $ newreg i
-interpInst LOAD = shouldHalt $ load
-interpInst NEG = shouldHalt $ neg
-interpInst ADD = shouldHalt $ add
-interpInst JMP = shouldHalt $ jmp
-interpInst (CJMP i) = shouldHalt $ cjmp i
-interpInst HALT = shouldHalt $ halt
+interpInst (PUSH i) = do push i; incr; return True
+interpInst POP = do pop; incr; return True
+interpInst DUP = do dup; incr; return True
+interpInst SWAP = do swap; incr; return True
+interpInst (NEWREG i) = do newreg i; incr; return True
+interpInst LOAD = do load; incr; return True
+interpInst STORE = do store; incr; return True
+interpInst NEG = do neg; incr; return True
+interpInst ADD = do add; incr; return True
+interpInst JMP = do jmp; return True
+interpInst (CJMP i) = do cjmp i; return True
+interpInst HALT = return False
 
-
-interp :: MSM ()
-interp = run
+{-
+ - I want something like this, but I can't:
+ -
+ -   interpInst inst = case inst of
+ -     POP -> pop
+ -     DUP -> dup
+ -     return True
+ -}
+interp :: MSM Int
+interp = do
+		x <- run
+		pop
 	where run = do
 		inst <- getInst
 		cont <- interpInst inst
@@ -295,7 +339,9 @@ interp = run
  -
  -}
 -- This does not type-check and therefore it is outcommented.
---runMSM :: Prog -> Either Error Int
---runMSM p =
---	let (MSM f) = interp
---	in fmap snd $ f $ initial p
+runMSM :: Prog -> Either Error Int
+runMSM p =
+	let (MSM f) = interp
+	in fmap snd $ f $ initial p
+
+p42 = [NEWREG 0, PUSH 1, DUP, NEG, ADD, PUSH 40, STORE, PUSH 2, PUSH 0, LOAD, ADD, HALT]
