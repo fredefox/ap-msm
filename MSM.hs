@@ -195,8 +195,10 @@ pop      :: MSM Int
 pop      =  MSM $ \state ->
 	case stack state of
 	[] -> Left $ Error StackUnderflow
-	x:xs -> Right (state { stack = xs}, x )
+	x:xs -> Right (state { stack = xs }, x )
 
+incr     :: MSM ()
+incr     =  MSM $ \s -> Right ( s { pc = succ $ pc s }, () )
 -- These functions are derivable from previously derived monadic instructions
 -- Jonas argues that they should live in `interpInst` - I like having them
 -- defined here so the mapping from `Inst` to these functions are entirely
@@ -204,9 +206,11 @@ pop      =  MSM $ \state ->
 dup      :: MSM ()
 dup      =  do
 	x <- pop
-	_ <- push x
+	push x
 	push x
 
+get      :: MSM State
+get      = MSM $ \s -> Right (s,s)
 
 swap     :: MSM ()
 swap     =  do
@@ -296,14 +300,15 @@ getInst = MSM $ \state ->
 			Left $ Error InvalidPc
 
 interpInst :: Inst -> MSM Bool
-interpInst (PUSH i) = do push i; return True
-interpInst POP = do pop; return True
-interpInst DUP = do dup; return True
-interpInst SWAP = do swap; return True
-interpInst (NEWREG i) = do newreg i; return True
-interpInst LOAD = do load; return True
-interpInst NEG = do neg; return True
-interpInst ADD = do add; return True
+interpInst (PUSH i) = do push i; incr; return True
+interpInst POP = do pop; incr; return True
+interpInst DUP = do dup; incr; return True
+interpInst SWAP = do swap; incr; return True
+interpInst (NEWREG i) = do newreg i; incr; return True
+interpInst LOAD = do load; incr; return True
+interpInst STORE = do store; incr; return True
+interpInst NEG = do neg; incr; return True
+interpInst ADD = do add; incr; return True
 interpInst JMP = do jmp; return True
 interpInst (CJMP i) = do cjmp i; return True
 interpInst HALT = return False
