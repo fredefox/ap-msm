@@ -76,7 +76,7 @@ data State =
 		pc    :: Int,
 		stack :: Stack,
 		regs  :: Regs
-	} deriving (Show)
+	} deriving (Show, Eq)
 
 initial :: Prog -> State
 initial pr = State pr 0 [] Map.empty
