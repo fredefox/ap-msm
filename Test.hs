@@ -121,8 +121,15 @@ tests = TestList [
 			t05, t06, t07, t08, t09,
 			t10, t11, t12
 		],
-		TestLabel "Other possible test-suites" $ TestList [
-		]
+		TestLabel "Sample program" $ TestList [
+			TestCase
+				$ assertBool "Test Program 42"
+				$ let p42 = [
+						NEWREG 0, PUSH 1, DUP, NEG, ADD, PUSH 40, STORE, PUSH
+						2, PUSH 0, LOAD, ADD, HALT
+					]
+				in Right 42 == runMSM p42
+				]
 	]
 
 main :: IO Counts
