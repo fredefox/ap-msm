@@ -38,27 +38,27 @@ runInstruction s instr =
 runInstruction' = runInstruction aState
 
 t00 = TestCase
-	$ assertBool "`PUSH`"
+	$ assertBool "Test instruction `PUSH`"
 	$ Right aState { stack = [42,1,0], pc = 1 } == runInstruction' ( PUSH 42 )
 
 t01 = TestCase
-	$ assertBool "`POP`"
+	$ assertBool "Test instruction `POP`"
 	$ Right aState { stack = [0], pc = 1 } == runInstruction' POP
 
 t02 = TestCase
-	$ assertBool "`DUP`"
+	$ assertBool "Test instruction `DUP`"
 	$ Right aState { stack = [1,1,0], pc = 1 } == runInstruction' DUP
 
 t03 = TestCase
-	$ assertBool "`SWAP`"
+	$ assertBool "Test instruction `SWAP`"
 	$ Right aState { stack = [0,1], pc = 1 } == runInstruction' SWAP
 
 t04 = TestCase
-	$ assertBool "`NEWREG`"
+	$ assertBool "Test instruction `NEWREG`"
 	$ Right aState { regs = Map.fromList [(0,42),(42, 0)], pc = 1 } == runInstruction' ( NEWREG 42 )
 
 t05 = TestCase
-	$ assertBool "`LOAD`"
+	$ assertBool "Test instruction `LOAD`"
 	$ Right s { stack = [1337], pc = 1 } ==
 		runInstruction s LOAD where
 			s = State {
@@ -69,34 +69,34 @@ t05 = TestCase
 			}
 
 t06 = TestCase
-	$ assertBool "`STORE`"
+	$ assertBool "Test instruction `STORE`"
 	$ Right aState { stack = [], regs = Map.fromList [(0,1)], pc = 1 } == runInstruction' ( STORE )
 
 t07 = TestCase
-	$ assertBool "`NEG`"
+	$ assertBool "Test instruction `NEG`"
 	$ Right aState { stack = [-1,0], pc = 1 } == runInstruction' NEG
 
 t08 = TestCase
-	$ assertBool "`ADD`"
+	$ assertBool "Test instruction `ADD`"
 	$ Right aState { stack = [1], pc = 1 } == runInstruction' ADD
 
 t09 = TestCase
-	$ assertBool "`JMP`"
+	$ assertBool "Test instruction `JMP`"
 	$ Right s { stack = [], pc = 42 }  == runInstruction s JMP where
 		s = State { prog = [], pc = 0, stack = [42], regs = Map.empty }
 
 t10 = TestCase
-	$ assertBool "`CJMP` - positive head of stack"
+	$ assertBool "Test instruction `CJMP` with positive head of stack"
 	$ Right s { stack = [], pc = 1 } == runInstruction s ( CJMP 1337 ) where
 		s = State { prog = [], pc = 0, stack = [42], regs = Map.empty }
 
 t11 = TestCase
-	$ assertBool "`CJMP` - negative head of stack"
+	$ assertBool "Test instruction `CJMP` with negative head of stack"
 	$ Right s { stack = [], pc = 1337 } == runInstruction s ( CJMP 1337 ) where
 		s = State { prog = [], pc = 0, stack = [-42], regs = Map.empty }
 
 t12 = TestCase
-	$ assertBool "`HALT`"
+	$ assertBool "Test instruction `HALT`"
 	$ Right aState == runInstruction' HALT
 
 tests = TestList [
