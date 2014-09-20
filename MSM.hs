@@ -212,6 +212,12 @@ dup      =  do
 get      :: MSM State
 get      = MSM $ \s -> Right (s,s)
 
+set      :: State -> MSM ()
+set s    = MSM $ const $ Right (s,())
+
+modify   :: (State -> State) -> MSM ()
+modify f =  MSM $ \s -> Right (f s, ())
+
 swap     :: MSM ()
 swap     =  do
 	x <- pop
