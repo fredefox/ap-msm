@@ -136,7 +136,7 @@ instance Functor MSM where
 	 -}
 	f `fmap` MSM sfc = MSM $ \s -> case sfc s of
 								   (Left e) -> Left e
-								   (Right (s, a)) -> Right (s, f a)
+								   (Right (s', a)) -> Right (s', f a)
 
 instance Monad MSM where
 	{-
@@ -307,7 +307,7 @@ getInst = MSM $ \state ->
 
 interpInst :: Inst -> MSM Bool
 interpInst (PUSH i) = do push i; incr; return True
-interpInst POP = do pop; incr; return True
+interpInst POP = do _ <- pop; incr; return True
 interpInst DUP = do dup; incr; return True
 interpInst SWAP = do swap; incr; return True
 interpInst (NEWREG i) = do newreg i; incr; return True
@@ -329,7 +329,7 @@ interpInst HALT = return False
  -}
 interp :: MSM Int
 interp = do
-		x <- run
+		run
 		pop
 	where run = do
 		inst <- getInst
@@ -349,5 +349,3 @@ runMSM :: Prog -> Either Error Int
 runMSM p =
 	let (MSM f) = interp
 	in fmap snd $ f $ initial p
-
-p42 = [NEWREG 0, PUSH 1, DUP, NEG, ADD, PUSH 40, STORE, PUSH 2, PUSH 0, LOAD, ADD, HALT]
