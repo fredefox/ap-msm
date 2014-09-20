@@ -34,7 +34,7 @@ aState = State {
 runInstruction :: State -> Inst -> Either Error State
 runInstruction s instr =
 	let (MSM f) = do _ <- interpInst instr; get
-	in fmap snd $ f $ s
+	in fmap snd $ f s
 
 runInstruction' :: Inst -> Either Error State
 runInstruction' = runInstruction aState
@@ -79,7 +79,7 @@ t05 = TestCase
 t06 :: Test
 t06 = TestCase
 	$ assertBool "Test instruction `STORE`"
-	$ Right aState { stack = [], regs = Map.fromList [(0,1)], pc = 1 } == runInstruction' ( STORE )
+	$ Right aState { stack = [], regs = Map.fromList [(0,1)], pc = 1 } == runInstruction' STORE
 
 t07 :: Test
 t07 = TestCase

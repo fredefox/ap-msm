@@ -266,10 +266,12 @@ jmp      =  do
 cjmp     :: Int -> MSM ()
 cjmp i   =  do
 	x <- pop
-	if x < 0 then
-		MSM $ \s -> Right (s { pc = i }, ())
-	else
-		MSM $ \s -> Right (s { pc = pc s + 1 }, ())
+	MSM (
+		if x < 0 then
+			\s -> Right (s { pc = i }, ())
+		else
+			\s -> Right (s { pc = pc s + 1 }, ())
+		)
 
 halt     :: MSM Bool
 halt     =  return False
