@@ -76,7 +76,7 @@ data State =
 		pc    :: Int,
 		stack :: Stack,
 		regs  :: Regs
-	} deriving (Show)
+	} deriving (Show, Eq)
 
 initial :: Prog -> State
 initial pr = State pr 0 [] Map.empty
@@ -136,7 +136,7 @@ instance Functor MSM where
 	 -}
 	f `fmap` MSM sfc = MSM $ \s -> case sfc s of
 								   (Left e) -> Left e
-								   (Right (s, a)) -> Right (s, f a)
+								   (Right (s', a)) -> Right (s', f a)
 
 instance Monad MSM where
 	{-
@@ -212,6 +212,12 @@ dup      =  do
 get      :: MSM State
 get      = MSM $ \s -> Right (s,s)
 
+set      :: State -> MSM ()
+set s    = MSM $ const $ Right (s,())
+
+modify   :: (State -> State) -> MSM ()
+modify f =  MSM $ \s -> Right (f s, ())
+
 swap     :: MSM ()
 swap     =  do
 	x <- pop
@@ -260,10 +266,12 @@ jmp      =  do
 cjmp     :: Int -> MSM ()
 cjmp i   =  do
 	x <- pop
-	if x < 0 then
-		MSM $ \s -> Right (s { pc = i }, ())
-	else
-		MSM $ \s -> Right (s { pc = pc s + 1 }, ())
+	MSM (
+		if x < 0 then
+			\s -> Right (s { pc = i }, ())
+		else
+			\s -> Right (s { pc = pc s + 1 }, ())
+		)
 
 halt     :: MSM Bool
 halt     =  return False
@@ -301,7 +309,7 @@ getInst = MSM $ \state ->
 
 interpInst :: Inst -> MSM Bool
 interpInst (PUSH i) = do push i; incr; return True
-interpInst POP = do pop; incr; return True
+interpInst POP = do _ <- pop; incr; return True
 interpInst DUP = do dup; incr; return True
 interpInst SWAP = do swap; incr; return True
 interpInst (NEWREG i) = do newreg i; incr; return True
@@ -323,7 +331,7 @@ interpInst HALT = return False
  -}
 interp :: MSM Int
 interp = do
-		x <- run
+		run
 		pop
 	where run = do
 		inst <- getInst
@@ -343,5 +351,3 @@ runMSM :: Prog -> Either Error Int
 runMSM p =
 	let (MSM f) = interp
 	in fmap snd $ f $ initial p
-
-p42 = [NEWREG 0, PUSH 1, DUP, NEG, ADD, PUSH 40, STORE, PUSH 2, PUSH 0, LOAD, ADD, HALT]

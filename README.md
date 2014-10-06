@@ -8,31 +8,36 @@ This report is for the second assignment in the course Advanced Programming.
 
 This docuement is written in [GitHub Flavored Markdown](https://help.github.com/articles/github-flavored-markdown). It may best be viewed in the markdown-format but is also included as a pdf. The pdf-version was created with [pandoc](http://johnmacfarlane.net/pandoc/).
 
-The project is maintened with git and repository acces can be granted by finding [me on GitHub](https://github.com/fredefox). The hash of the current version that I am hereby submitting is `57d3dc66f3a1fd2c9b1c69eaf5be2bce60931c2c`.
+The project is maintened with git and repository acces can be granted by finding [me on GitHub](https://github.com/fredefox).
 
 In this report I present the results of my efforts to implement a stack machine written in Haskell. The implementation is acheived through the use of a monadic type `MSM`. [The specification](http://www.diku.dk/~kflarsen/ap-2014/notes/msm.html) for this project is available from the course homepage for Advanced Programming. For the assigment a [skeletal implementation for the implementation](http://www.diku.dk/~kflarsen/ap-2014/notes/msm-skel.hs) was given. The structure in this project loosely follows this.
 
 Source-code is attached along with pdf and markdown-versions of this report.
 
 # Introduction
+The code presented herein presents the implementation of a stack machine (`MSM`). The machine supports the following instructions:
 
-## A note about non-completion
-I commenced writing this report 45 minutes before deadline. I have been working all weekend on the project yet unfortunately I have not been able finish the project entirely.
+  * PUSH
+  * POP
+  * DUP
+  * SWAP
+  * NEWREG
+  * LOAD
+  * STORE
+  * NEG
+  * ADD
+  * JMP
+  * CJMP
+  * HALT
 
-I have implemented all the functions from the specification with the exception of `runMSM`. I could not get it to type-check.
+All code have been compiled without warnings using `-Wall`, nor are any hints given using `hlint`.
 
-Obviously this is not a full implementation but I hope that I will get an opportunity to resubmit my solution once I get some much needed feedback on my current attempt.
-
-Since I do not have a full implementation it has also not been possible to do any testing on the current implementation.
-
-My goal with this report will then be to document what I have been able to implement and evaluate what things I believe to have implemented correctly 
+Please refer to the source-code when looking at the samples included in this report for completeness.
 
 ## Code structure
 All source-code is available in `MSM.hs`.
 
-All functions are annoted with comments where appropriate.
-
-This is the first code I have ever written in Haskell. Perhaps my code illustrates this. My own thinknig is that the main tell probably is that I use a limited set of concepts from the programming language.
+All functions are annotated with comments where appropriate.
 
 Each bullet in the specification corresponds to a comment in the source-code that start with:
 
@@ -45,12 +50,13 @@ Each bullet in the specification corresponds to a comment in the source-code tha
  -}
 ```
 
+### Tests
+Unit-tests for the module is presented in `Test.hs`. There are two test-suites. One for each individual machine-instruction and one with an execution of a sample program.
+
 ## Code-review
-Multiple definitions in this library are taken directly from the specification. These include: `Inst`, `Prog`, `Error`, `ErrorType`, `interp` and `runMSM`. Other definitions are given partially. No place in my code have I gone against a definition that was given.
+Multiple definitions in this library are taken directly from the specification. These include: `Inst`, `Prog`, `Error`, `ErrorType`, and `runMSM`. Other definitions are given partially. One exception where I had to change the definition of a method that was given was `interp`. The specification was in contradiction with the provided skeletal code. I therefore change the definition to execute an extra `pop`-operation at the end of execution.
 
-I have not used `Error` or `ErrorType` anywhere in my code.
-
-I will skip all the more or less trivial types and focus on the monads. Now. On to the things that I *did* define. A `State` is defined like this:
+A `State` is defined like this:
 
 ```haskell
 data State =
@@ -69,29 +75,33 @@ Here the definition is given along with the convenience-function `initial` that 
 
 
 ### The monad `MSM`
-The Micro Stack Machine (`MSM`) itself is defined like this:
+I initially defined the Micro Stack Machine like this:
 
 ```haskell
 newtype MSM a = MSM (State -> (a, State))
 ```
 
-An `MSM` is `Monad` which in turn is a `Functor`. Here is how `MSM` becomes an instance of these:
+My reason for chosing this came from looking at the `State`-monad as defined in the standard Haskell library. However, I much later found out - after making my initial implentation - that this definition was incompatible with the specification. I therefore had to refactor all my code to comply with the following definition.
+
+```haskell
+newtype MSM a = MSM (State -> Either Error (State, a))
+```
+
+An `MSM` is a `Monad` which in turn is a `Functor`. Here is how `MSM` becomes an instance of these:
 
 ```haskell
 instance Functor MSM where
-    f `fmap` MSM sfc = MSM $ \s -> let (a, b) = sfc s
-                                   in (f a, b)
+    f `fmap` MSM sfc = MSM $ \s -> case sfc s of
+                                   (Left e) -> Left e
+                                   (Right (s', a)) -> Right (s', f a)
 
 instance Monad MSM where
-    return a = MSM $ const (a, initial [])
-    (MSM sfc) >>= f = MSM $ \s -> let (a, b)  = sfc s
-                                      (MSM g) = f a
-                                  in   g b
+    return a = MSM $ \s -> Right (s, a)
+    (MSM sfc0) >>= f = MSM $ \s -> either Left nextStep $ sfc0 s
+                        where nextStep (s', a) = let (MSM sfc1) = f a in sfc1 s'
 ```
 
 I think maybe I could have reused the `fmap`-operator in my definition of `>>=` but I am not sure.
-
-My inspiration for this implemention comes from the `State`-monad. My thinking is that an `MSM` is basically just a specific kind of `State`-monad where the "state" is unsurpisingly an instance of `State`.
 
 ### Monadic machine-instructions
 
@@ -113,40 +123,57 @@ The machine instructions are:
 The implementation of the monadic instructions were rather tedious and quite straight-forward. An example of one such instructions is the `push`-function defined like this:
 
 
-```
+```haskell
 push     :: Int -> MSM ()
 push a   =  MSM $ \state ->
-    ((), state { stack = a : stack state } )
+    Right (state { stack = a : stack state }, () )
 ```
 
 The important thing to note about all these instructions are that they should be monadic - i.e. return an instance of `MSM`. I have chosen to let most of them return an `MSM ()` for instructions that were just supposed to alter the state of the machine.
 
 ### The interpreter
-Implementing the interpreter was where I had the most serious problems and most likely the only place where my code has serious short-comings.
-
 Working with the implementation I was doing detective-work to try and get the return-types to line up properly. It still confuses me a bit how `interp` can be a constant yet serve as a function that interprets something. I know this problem is at the heart of understanding monads - but it feels like I am a lot closer to understanding it.
 
 My function `getInst` serves as a monadic way of accessing the next instruction to execute on the machine.
 
 `interpInst` is basically just a method to translate from instances of `Inst` to functions that can be executed on an `MSM`.
 
-The implementation of `interp` is taken directly from the specification.
+The implementation of `interp` has been changed to make the specification congruent.
 
-`runMSM` does not typecheck and is left in the library for reference. Here is the implementation:
+I had problems implementing the interpreter because I initially chose the wrong signature for my `MSM`-monad.
 
-```haskell
-runMSM :: Prog -> Either Error Int
-runMSM p =
-  let (MSM f) = interp
-  in fmap snd $ f $ initial p
-```
-
-Here is the analysis that I performed on the issue (this is a quote from a question I posted on the course forum):
-
-> `initial p` returns `State`, `f` has type `State -> ((), State)`. But I cant `fmap` `snd` in there on the second element in the tuple (which is what I recon it is trying to do since: `fmap snd ((),(1,2)) == ((),(2))`). But `State` obviously cannot be treated as a tuple.
+After this refactorization I had a problem trying to execute the sample program `p42` (found in the skeletal implementation). It was difficult for me to find the error but after it was brought to my attention that I could use `Debug.Trace` the error became apparant. The program counter was never incremented. Along with some minor adjustments my code finally worked.
 
 ### Testing
-Unfortunately no formal testing has been done.
+Different methods have been proposed for how to test the implementation. Here I will present my choice of testing along with viable alternatives along with argumentation why I think the approach I have chosen is most favorable.
+
+3 ways of testing the code has been considered:
+
+  * Unit-testing
+  * Testing randomly generated programs
+  * Testing a program equivalent to some computation and testing the the computation yields the same result with the machine as compared to testing it with some haskell-function
+  * Optional task: Compiling to the `MSM`-language
+
+#### Unit testing
+In the first case we have unit-testing. This is the approach I have chosen. There is one test-case for each machine-instruction (except for CJMP where two test-cases were needed). This method was chosen and test-cases deliberately designed to give some form of coverage over all the machine-instructions. One thing that I should note here is that I have only implemented positive test-cases - that is, tests that show that a given computation works. I have not defined any test-cases that show that some error occur (like `pop`ping from an empty stack). My code contains two `TODO`-notes. (`MSM.hs:238`, `MSM.hs:247`)
+
+I know that my program does at least not take these two cases into consideration:
+
+  * A value is loaded from a non-allocated register.
+  * A store is performed on a non-allocated register.
+
+In the first case a runtime-error will occur, in the latter it it will succeed even though the specification calls for an error here.
+
+Please refer to the source code for the full test-suite.
+
+#### Random program
+Generating random programs is not a good idea because no method can be implemented to show what the machine should return - nor if it should ever even halt.
+
+#### Random input for pre-defined programs.
+This method is a nice idea. I have chosen not do it alone for the reason that I felt that generating such a program would also only test a certain subset of "valid" programs thereby not offering many advantages over unit-testing. It is my belief that the same kind of coverage can be gained trough carefully constructed test-cases.
+
+#### Compiling programs
+This method has many of the same traits as above - of course with the added nicety of having a function able to compile to this machine that I have just implemented.
 
 # Conclusion
-My efforts to implement a monadic stack machine in haskell has been presented. The attempt was not a success. My own thought as to what I have done wrong has been presented. Work will continue on implementing this. And hopefully with some proper feedback a final solution will be presented.
+In this report my efforts to succesfully implement a stack machine have been presented. Successful testing has been applied to the implementation although it has, at the same time, been highlighted that some slight adjustments is needed to increase robustness.
